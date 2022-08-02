@@ -4,7 +4,7 @@
 # educational purposes provided that (1) you do not distribute or publish
 # solutions, (2) you retain this notice, and (3) you provide clear
 # attribution to UC Berkeley, including a link to http://ai.berkeley.edu.
-#
+# 
 # Attribution Information: The Pacman AI projects were developed at UC Berkeley.
 # The core projects and autograders were primarily created by John DeNero
 # (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
@@ -78,9 +78,9 @@ class SearchAgent(Agent):
 
         # Get the search function from the name and heuristic
         if fn not in dir(search):
-            raise AttributeError, fn + ' is not a search function in search.py.'
+            raise AttributeError(fn + ' is not a search function in search.py.')
         func = getattr(search, fn)
-        if 'heuristic' not in func.func_code.co_varnames:
+        if 'heuristic' not in func.__code__.co_varnames:
             print('[SearchAgent] using function ' + fn)
             self.searchFunction = func
         else:
@@ -89,14 +89,14 @@ class SearchAgent(Agent):
             elif heuristic in dir(search):
                 heur = getattr(search, heuristic)
             else:
-                raise AttributeError, heuristic + ' is not a function in searchAgents.py or search.py.'
+                raise AttributeError(heuristic + ' is not a function in searchAgents.py or search.py.')
             print('[SearchAgent] using function %s and heuristic %s' % (fn, heuristic))
             # Note: this bit of Python trickery combines the search algorithm and the heuristic
             self.searchFunction = lambda x: func(x, heuristic=heur)
 
         # Get the search problem type from the name
         if prob not in globals().keys() or not prob.endswith('Problem'):
-            raise AttributeError, prob + ' is not a search problem type in SearchAgents.py.'
+            raise AttributeError(prob + ' is not a search problem type in SearchAgents.py.')
         self.searchType = globals()[prob]
         print('[SearchAgent] using problem type ' + prob)
 
@@ -109,11 +109,11 @@ class SearchAgent(Agent):
 
         state: a GameState object (pacman.py)
         """
-        if self.searchFunction == None: raise Exception, "No search function provided for SearchAgent"
+        if self.searchFunction == None: raise Exception("No search function provided for SearchAgent")
         starttime = time.time()
         problem = self.searchType(state) # Makes a new search problem
         self.actions  = self.searchFunction(problem) # Find a path
-        totalCost = problem.getCostOfActions(self.actions)
+        totalCost = problem.getCostOfActionSequence(self.actions)
         print('Path found with total cost of %d in %.1f seconds' % (totalCost, time.time() - starttime))
         if '_expanded' in dir(problem): print('Search nodes expanded: %d' % problem._expanded)
 
@@ -135,7 +135,7 @@ class SearchAgent(Agent):
 
 class PositionSearchProblem(search.SearchProblem):
     """
-    A search problem defines the state space, start state, goal test, successor
+    A search problem defines the state space, start state, goal test, child
     function and cost function.  This search problem can be used to find paths
     to a particular point on the pacman board.
 
@@ -159,7 +159,7 @@ class PositionSearchProblem(search.SearchProblem):
         self.costFn = costFn
         self.visualize = visualize
         if warn and (gameState.getNumFood() != 1 or not gameState.hasFood(*goal)):
-            print 'Warning: this does not look like a regular search maze'
+            print('Warning: this does not look like a regular search maze')
 
         # For display purposes
         self._visited, self._visitedlist, self._expanded = {}, [], 0 # DO NOT CHANGE
@@ -180,27 +180,23 @@ class PositionSearchProblem(search.SearchProblem):
 
         return isGoal
 
-    def getSuccessors(self, state):
+    def expand(self, state):
         """
-        Returns successor states, the actions they require, and a cost of 1.
+        Returns child states, the actions they require, and a cost of 1.
 
          As noted in search.py:
              For a given state, this should return a list of triples,
-         (successor, action, stepCost), where 'successor' is a
-         successor to the current state, 'action' is the action
+         (child, action, stepCost), where 'child' is a
+         child to the current state, 'action' is the action
          required to get there, and 'stepCost' is the incremental
-         cost of expanding to that successor
+         cost of expanding to that child
         """
 
-        successors = []
-        for action in [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]:
-            x,y = state
-            dx, dy = Actions.directionToVector(action)
-            nextx, nexty = int(x + dx), int(y + dy)
-            if not self.walls[nextx][nexty]:
-                nextState = (nextx, nexty)
-                cost = self.costFn(nextState)
-                successors.append( ( nextState, action, cost) )
+        children = []
+        for action in self.getActions(state):
+            nextState = self.getNextState(state, action)
+            cost = self.getActionCost(state, action, nextState)
+            children.append( ( nextState, action, cost) )
 
         # Bookkeeping for display purposes
         self._expanded += 1 # DO NOT CHANGE
@@ -208,9 +204,33 @@ class PositionSearchProblem(search.SearchProblem):
             self._visited[state] = True
             self._visitedlist.append(state)
 
-        return successors
+        return children
 
-    def getCostOfActions(self, actions):
+    def getActions(self, state):
+        possible_directions = [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]
+        valid_actions_from_state = []
+        for action in possible_directions:
+            x, y = state
+            dx, dy = Actions.directionToVector(action)
+            nextx, nexty = int(x + dx), int(y + dy)
+            if not self.walls[nextx][nexty]:
+                valid_actions_from_state.append(action)
+        return valid_actions_from_state
+
+    def getActionCost(self, state, action, next_state):
+        assert next_state == self.getNextState(state, action), (
+            "Invalid next state passed to getActionCost().")
+        return self.costFn(next_state)
+
+    def getNextState(self, state, action):
+        assert action in self.getActions(state), (
+            "Invalid action passed to getActionCost().")
+        x, y = state
+        dx, dy = Actions.directionToVector(action)
+        nextx, nexty = int(x + dx), int(y + dy)
+        return (nextx, nexty)
+
+    def getCostOfActionSequence(self, actions):
         """
         Returns the cost of a particular sequence of actions. If those actions
         include an illegal move, return 999999.
@@ -270,7 +290,7 @@ class CornersProblem(search.SearchProblem):
     """
     This search problem finds paths through all four corners of a layout.
 
-    You must select a suitable state space and successor function
+    You must select a suitable state space and child function
     """
 
     def __init__(self, startingGameState):
@@ -283,43 +303,11 @@ class CornersProblem(search.SearchProblem):
         self.corners = ((1,1), (1,top), (right, 1), (right, top))
         for corner in self.corners:
             if not startingGameState.hasFood(*corner):
-                print 'Warning: no food in corner ' + str(corner)
+                print('Warning: no food in corner ' + str(corner))
         self._expanded = 0 # DO NOT CHANGE; Number of search nodes expanded
         # Please add any code here which you would like to use
         # in initializing the problem
         "*** YOUR CODE HERE ***"
-
-    # The representation of the space is the following one:
-    # state = {
-    #           'position': (x, y),
-    #           'isCornerVisited': {c1: True, c2: False, c3: True, c4: True}
-    #         }
-    # Note that the states that we return must be hashable, so se cannot
-    # return the state as it is. We must use a wrapper to convert it to
-    # tuple (tupleState) and another to convert it to dict (dictState)
-
-    def tupleState(self, state):
-        """
-        Input: A state represented with a dictionary
-        Output: The same state represented with a tuple
-        """
-        l = []
-        # We must ensure that the order of the corners is always the same,
-        # so we use self.corners which is an immutable structure
-        for corner in self.corners:
-            l.append(state['isCornerVisited'][corner])
-        return state['position'], tuple(l)
-
-    def dictState(self, state):
-        """
-        Input: A state represented with a tuple
-        Output: The same state represented with a dictionary
-        """
-        isCornerVisited = {}
-        # By doing that we ensure that the order of corners remains the same
-        for i in range(4):
-            isCornerVisited[self.corners[i]] = state[1][i]
-        return {'position': state[0], 'isCornerVisited': isCornerVisited}
 
     def getStartState(self):
         """
@@ -327,86 +315,63 @@ class CornersProblem(search.SearchProblem):
         space)
         """
         "*** YOUR CODE HERE ***"
-        state = {'position': self.startingPosition, 'isCornerVisited': {}}
-        for corner in self.corners:
-            if state['position'] == corner:
-                state['isCornerVisited'][corner] = True
-            else:
-                state['isCornerVisited'][corner] = False
-        return self.tupleState(state)
-
+        util.raiseNotDefined()
 
     def isGoalState(self, state):
         """
         Returns whether this search state is a goal state of the problem.
         """
         "*** YOUR CODE HERE ***"
-        # Return True only if we have visited all the corners
-        state = self.dictState(state)
-        return all(corner for corner in state['isCornerVisited'].values())
+        util.raiseNotDefined()
 
-    def generateSuccessor(self, state, action):
+    def expand(self, state):
         """
-        Given a state and an action, returns its successor state
-        Note that if the successor state is invalid, None is returned
-        """
-
-        x, y = state['position']
-        dx, dy = Actions.directionToVector(action)
-        next_position = nextx, nexty = int(x + dx), int(y + dy)
-
-        # Do not generate a state if it is an invalid one
-        if self.walls[nextx][nexty]: return None
-
-        nextState = {
-            'position': next_position,
-            'isCornerVisited': state['isCornerVisited'].copy()
-        }
-
-        if next_position in self.corners:
-            nextState['isCornerVisited'][next_position] = True
-
-        return self.tupleState(nextState)
-
-    def getSuccessors(self, state):
-        """
-        Returns successor states, the actions they require, and a cost of 1.
+        Returns child states, the actions they require, and a cost of 1.
 
          As noted in search.py:
-            For a given state, this should return a list of triples, (successor,
-            action, stepCost), where 'successor' is a successor to the current
+            For a given state, this should return a list of triples, (child,
+            action, stepCost), where 'child' is a child to the current
             state, 'action' is the action required to get there, and 'stepCost'
-            is the incremental cost of expanding to that successor
+            is the incremental cost of expanding to that child
         """
-        # Update the state based on the action we are taking
-        # In order to generate the successors states, we must consider each
-        # of the four possible actions and return the corresponding states
-        # In order to only generate valid successors, we must take the walls
-        # into account and whether or not we are moving into a corner
 
-        # First of all we must convert our state back to dict
-        state = self.dictState(state)
-        stepCost = 1
-        
-        successors = []
-        for action in [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]:
-            # Add a successor state to the successor list if the action is legal
-            # Here's a code snippet for figuring out whether a new position hits a wall:
-            #   x,y = currentPosition
-            #   dx, dy = Actions.directionToVector(action)
-            #   nextx, nexty = int(x + dx), int(y + dy)
-            #   hitsWall = self.walls[nextx][nexty]
-
+        children = []
+        for action in self.getActions(state):
+            # Add a child state to the child list if the action is legal
+            # You should call getActions, getActionCost, and getNextState.
             "*** YOUR CODE HERE ***"
-            successor = self.generateSuccessor(state, action)
-
-            if successor is not None:
-                successors.append((successor, action, stepCost))
 
         self._expanded += 1 # DO NOT CHANGE
-        return successors
+        return children
 
-    def getCostOfActions(self, actions):
+    def getActions(self, state):
+        possible_directions = [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]
+        valid_actions_from_state = []
+        for action in possible_directions:
+            x, y = state[0]
+            dx, dy = Actions.directionToVector(action)
+            nextx, nexty = int(x + dx), int(y + dy)
+            if not self.walls[nextx][nexty]:
+                valid_actions_from_state.append(action)
+        return valid_actions_from_state
+
+    def getActionCost(self, state, action, next_state):
+        assert next_state == self.getNextState(state, action), (
+            "Invalid next state passed to getActionCost().")
+        return 1
+
+    def getNextState(self, state, action):
+        assert action in self.getActions(state), (
+            "Invalid action passed to getActionCost().")
+        x, y = state[0]
+        dx, dy = Actions.directionToVector(action)
+        nextx, nexty = int(x + dx), int(y + dy)
+        "*** YOUR CODE HERE ***"
+        util.raiseNotDefined()
+        # you will need to replace the None part of the following tuple.
+        return ((nextx, nexty), None)
+
+    def getCostOfActionSequence(self, actions):
         """
         Returns the cost of a particular sequence of actions.  If those actions
         include an illegal move, return 999999.  This is implemented for you.
@@ -437,27 +402,7 @@ def cornersHeuristic(state, problem):
     walls = problem.walls # These are the walls of the maze, as a Grid (game.py)
 
     "*** YOUR CODE HERE ***"
-    # The heuristic is the Manhattan distance of the furthest non visited corner
-
-    # This heuristic is admissible (it will always be a lower bound of the actual
-    # shortest path to the nearest goal since at least we have to visit that corner
-    # and Manhattan distance is the fastest path to reach it)
-    # Moreover, it is consistent (any action has cost one and the heuristic
-    # will drop by one at most if that action is taken)
-
-    # Finally, when we reach the goal state (all corners have been visited),
-    # this heuristic returns 0 and will never return a negative value
-
-    state = problem.dictState(state)
-    position = state['position']
-    distances = []
-
-    for corner, visited in state['isCornerVisited'].items():
-        if not visited:
-            h = abs(position[0] - corner[0]) + abs(position[1] - corner[1])
-            distances.append(h)
-
-    return 0 if not distances else max(distances)
+    return 0 # Default to trivial solution
 
 class AStarCornersAgent(SearchAgent):
     "A SearchAgent for FoodSearchProblem using A* and your foodHeuristic"
@@ -487,21 +432,43 @@ class FoodSearchProblem:
     def isGoalState(self, state):
         return state[1].count() == 0
 
-    def getSuccessors(self, state):
-        "Returns successor states, the actions they require, and a cost of 1."
-        successors = []
+    def expand(self, state):
+        "Returns child states, the actions they require, and a cost of 1."
+        children = []
         self._expanded += 1 # DO NOT CHANGE
-        for direction in [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]:
-            x,y = state[0]
-            dx, dy = Actions.directionToVector(direction)
+        for action in self.getActions(state):
+            next_state = self.getNextState(state, action)
+            action_cost = self.getActionCost(state, action, next_state)
+            children.append( ( next_state, action, action_cost) )
+        return children
+
+    def getActions(self, state):
+        possible_directions = [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]
+        valid_actions_from_state = []
+        for action in possible_directions:
+            x, y = state[0]
+            dx, dy = Actions.directionToVector(action)
             nextx, nexty = int(x + dx), int(y + dy)
             if not self.walls[nextx][nexty]:
-                nextFood = state[1].copy()
-                nextFood[nextx][nexty] = False
-                successors.append( ( ((nextx, nexty), nextFood), direction, 1) )
-        return successors
+                valid_actions_from_state.append(action)
+        return valid_actions_from_state
 
-    def getCostOfActions(self, actions):
+    def getActionCost(self, state, action, next_state):
+        assert next_state == self.getNextState(state, action), (
+            "Invalid next state passed to getActionCost().")
+        return 1
+
+    def getNextState(self, state, action):
+        assert action in self.getActions(state), (
+            "Invalid action passed to getActionCost().")
+        x, y = state[0]
+        dx, dy = Actions.directionToVector(action)
+        nextx, nexty = int(x + dx), int(y + dy)
+        nextFood = state[1].copy()
+        nextFood[nextx][nexty] = False
+        return ((nextx, nexty), nextFood)
+
+    def getCostOfActionSequence(self, actions):
         """Returns the cost of a particular sequence of actions.  If those actions
         include an illegal move, return 999999"""
         x,y= self.getStartState()[0]
@@ -520,39 +487,6 @@ class AStarFoodSearchAgent(SearchAgent):
     def __init__(self):
         self.searchFunction = lambda prob: search.aStarSearch(prob, foodHeuristic)
         self.searchType = FoodSearchProblem
-
-def furthestFootDotDistance(start, foodList, walls):
-
-    # Dictionary storing the maze distance from start to any given position
-    # distance[u] = n means that position u is n steps away from start
-    distance = {start: 0}
-
-    # Set of visited positions in order to avoid revisiting them again
-    visited = {start}
-
-    queue = util.Queue()
-    queue.push(start)
-
-    while not queue.isEmpty():
-
-        position = x, y = queue.pop()
-
-        if position in foodList:
-            # This is the last foot dot, hence the furthest one
-            if len(foodList) == 1: return distance[position]
-            # There are still remaining foot dots in the list, keep exploring
-            foodList.remove(position)
-
-        for action in [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]:
-            dx, dy = Actions.directionToVector(action)
-            next_position = nextx, nexty = int(x + dx), int(y + dy)
-            if not walls[nextx][nexty] and next_position not in visited:
-                queue.push(next_position)
-                visited.add(next_position)
-                # A single action separates position from next_position, so the distance is 1
-                distance[next_position] = distance[position] + 1
-
-    return None
 
 def foodHeuristic(state, problem):
     """
@@ -584,27 +518,7 @@ def foodHeuristic(state, problem):
     """
     position, foodGrid = state
     "*** YOUR CODE HERE ***"
-    # The heuristic is the maze distance from position to the furthest food dot
-
-    # This heuristic is admissible (in order to eat all food dots we have
-    # at least to move to the furthest one)
-    # Moreover, it is consistent (any action has cost one and the heuristic
-    # will drop by one at most if that action is taken)
-
-    foodList = foodGrid.asList()
-    walls = problem.walls
-
-    # There is no food left: goal state is reached
-    if not foodList: return 0
-
-    # To find the maze distance from position to the furthest food dot,
-    # we perform a BFS starting from position and stopping when the
-    # last food dot (thus the furthest) is found
-    # Note that there is already a maze_distance function implemented, but
-    # it would run a BFS for every single food position and with this
-    # implementation a single BFS is run. Moreover, it needs a full
-    # gameState as argument and this function has no access to it
-    return furthestFootDotDistance(start=position, foodList=foodList, walls=walls)
+    return 0
 
 class ClosestDotSearchAgent(SearchAgent):
     "Search for all food using a sequence of searches"
@@ -618,10 +532,10 @@ class ClosestDotSearchAgent(SearchAgent):
                 legal = currentState.getLegalActions()
                 if action not in legal:
                     t = (str(action), str(currentState))
-                    raise Exception, 'findPathToClosestDot returned an illegal move: %s!\n%s' % t
-                currentState = currentState.generateSuccessor(0, action)
+                    raise Exception('findPathToClosestDot returned an illegal move: %s!\n%s' % t)
+                currentState = currentState.generateChild(0, action)
         self.actionIndex = 0
-        print 'Path found with cost %d.' % len(self.actions)
+        print('Path found with cost %d.' % len(self.actions))
 
     def findPathToClosestDot(self, gameState):
         """
@@ -635,7 +549,7 @@ class ClosestDotSearchAgent(SearchAgent):
         problem = AnyFoodSearchProblem(gameState)
 
         "*** YOUR CODE HERE ***"
-        return search.uniformCostSearch(problem)
+        util.raiseNotDefined()
 
 class AnyFoodSearchProblem(PositionSearchProblem):
     """
@@ -643,7 +557,7 @@ class AnyFoodSearchProblem(PositionSearchProblem):
 
     This search problem is just like the PositionSearchProblem, but has a
     different goal test, which you need to fill in below.  The state space and
-    successor function do not need to be changed.
+    child function do not need to be changed.
 
     The class definition above, AnyFoodSearchProblem(PositionSearchProblem),
     inherits the methods of the PositionSearchProblem.
@@ -668,11 +582,10 @@ class AnyFoodSearchProblem(PositionSearchProblem):
         The state is Pacman's position. Fill this in with a goal test that will
         complete the problem definition.
         """
-        x, y = state
+        x,y = state
 
         "*** YOUR CODE HERE ***"
-        # If there is food at this position, we have reached the goal state
-        return self.food[x][y]
+        util.raiseNotDefined()
 
 def mazeDistance(point1, point2, gameState):
     """
