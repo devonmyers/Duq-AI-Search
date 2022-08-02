@@ -308,6 +308,17 @@ class CornersProblem(search.SearchProblem):
         # Please add any code here which you would like to use
         # in initializing the problem
         "*** YOUR CODE HERE ***"
+        '''
+        State: pacman position, remaining corners.
+        See their hints (and getNextState): They assume tuple beginning 
+        with position.
+        So syntax:
+        ( position, (corner1, ...) )
+        Probably a good idea to make state entirely immutable to avoid 
+        accidentally changing elements!  
+        Immutability also means that a set can represent expanded, if desired.
+        Goal state: no corners remain (corners tuple is empty).
+        '''
 
     def getStartState(self):
         """
@@ -315,14 +326,16 @@ class CornersProblem(search.SearchProblem):
         space)
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        return ( self.startingPosition, self.corners)
+        #util.raiseNotDefined()
 
     def isGoalState(self, state):
         """
         Returns whether this search state is a goal state of the problem.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        return not state[1]
+        #util.raiseNotDefined()
 
     def expand(self, state):
         """
@@ -340,6 +353,10 @@ class CornersProblem(search.SearchProblem):
             # Add a child state to the child list if the action is legal
             # You should call getActions, getActionCost, and getNextState.
             "*** YOUR CODE HERE ***"
+            next_state = self.getNextState(state, action)
+            children.append( (next_state,
+                              action,
+                              self.getActionCost(state, action, next_state)) )
 
         self._expanded += 1 # DO NOT CHANGE
         return children
@@ -367,9 +384,20 @@ class CornersProblem(search.SearchProblem):
         dx, dy = Actions.directionToVector(action)
         nextx, nexty = int(x + dx), int(y + dy)
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        # util.raiseNotDefined()
         # you will need to replace the None part of the following tuple.
-        return ((nextx, nexty), None)
+
+        # If we are now on a previously unvisited corner, remove that
+        # corner from the list of unvisited corners.
+        # Then return state consisting of pacman position and remaining corners.
+        position = (nextx, nexty)
+        corners = state[1]
+        if position in corners:
+            corner_list = list(corners)
+            corner_list.remove(position)
+            corners = tuple(corner_list)
+        #return ((nextx, nexty), None)
+        return ( position, corners )
 
     def getCostOfActionSequence(self, actions):
         """
@@ -402,7 +430,14 @@ def cornersHeuristic(state, problem):
     walls = problem.walls # These are the walls of the maze, as a Grid (game.py)
 
     "*** YOUR CODE HERE ***"
-    return 0 # Default to trivial solution
+    manhattanDistances = []		# Manhattan Distance = M.D.
+    remaining_corners = state[1]	# tuple of (x,y) locations
+    for c in remaining_corners:		# for each corner that has not been visited, compute M.D. to that corner
+        manhattanDistances.append(util.manhattanDistance(state[0], c))
+    if len(manhattanDistances) != 0:	# If there are still un-visited corners, return max M.D. to any corner
+        return max(manhattanDistances)
+    else:				# If there all corners have been visited, heuristic is 0
+        return 0
 
 class AStarCornersAgent(SearchAgent):
     "A SearchAgent for FoodSearchProblem using A* and your foodHeuristic"
@@ -604,3 +639,4 @@ def mazeDistance(point1, point2, gameState):
     assert not walls[x2][y2], 'point2 is a wall: ' + str(point2)
     prob = PositionSearchProblem(gameState, start=point1, goal=point2, warn=False, visualize=False)
     return len(search.bfs(prob))
+
