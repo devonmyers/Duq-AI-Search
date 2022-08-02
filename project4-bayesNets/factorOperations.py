@@ -15,6 +15,7 @@
 from bayesNet import Factor
 import operator as op
 import util
+import functools
 
 def joinFactorsByVariableWithCallTracking(callTrackingList=None):
 
@@ -43,8 +44,8 @@ def joinFactorsByVariableWithCallTracking(callTrackingList=None):
         # typecheck portion
         numVariableOnLeft = len([factor for factor in currentFactorsToJoin if joinVariable in factor.unconditionedVariables()])
         if numVariableOnLeft > 1:
-            print "Factor failed joinFactorsByVariable typecheck: ", factor
-            raise ValueError, ("The joinBy variable can only appear in one factor as an \nunconditioned variable. \n" +  
+            print("Factor failed joinFactorsByVariable typecheck: ", factor)
+            raise ValueError("The joinBy variable can only appear in one factor as an \nunconditioned variable. \n" +  
                                "joinVariable: " + str(joinVariable) + "\n" +
                                ", ".join(map(str, [factor.unconditionedVariables() for factor in currentFactorsToJoin])))
         
@@ -90,10 +91,10 @@ def joinFactors(factors):
     # typecheck portion
     setsOfUnconditioned = [set(factor.unconditionedVariables()) for factor in factors]
     if len(factors) > 1:
-        intersect = reduce(lambda x, y: x & y, setsOfUnconditioned)
+        intersect = functools.reduce(lambda x, y: x & y, setsOfUnconditioned)
         if len(intersect) > 0:
-            print "Factor failed joinFactors typecheck: ", factor
-            raise ValueError, ("unconditionedVariables can only appear in one factor. \n"
+            print("Factor failed joinFactors typecheck: ", factor)
+            raise ValueError("unconditionedVariables can only appear in one factor. \n"
                     + "unconditionedVariables: " + str(intersect) + 
                     "\nappear in more than one input factor.\n" + 
                     "Input factors: \n" +
@@ -101,28 +102,48 @@ def joinFactors(factors):
 
 
     "*** YOUR CODE HERE ***"
-    setOfUnconditioned = set()
-    setOfConditioned = set()
+    #util.raiseNotDefined()
 
-    # Get all variables that are unconditioned and conditioned
+    # Obtain the lists of unconditioned and conditioned variables.
+    unconditionedVariables = set()
+    conditionedVariables = set()
+    # ... First, create sets of all of the variables that appear as
+    # ... unconditioned/conditioned in any factor.
     for factor in factors:
-        setOfUnconditioned.update(factor.unconditionedVariables())
-        setOfConditioned.update(factor.conditionedVariables())
+        unconditionedVariables.update(factor.unconditionedVariables())
+        conditionedVariables.update(factor.conditionedVariables())
+    
+    # ... Next, removed all unconditioned variables from the set of
+    # ... conditioned.
+    conditionedVariables -= unconditionedVariables
 
-    # Remove all unconditioned variables from conditioned
-    setOfConditioned.difference_update(setOfUnconditioned)
+    # Create a factor with zeros for all probabilities.  We are told
+    # to assume that every factor has the same variable-domain
+    # dictionary, so we'll use the dictionary of the first factor to
+    # create the new factor.  Note that 'factors' is not a list as
+    # claimed in the docstring for this function.  Thankfully,
+    # 'factors' can be cast to a list, which allows us to obtain the
+    # first factor.
+    newFactor = Factor(unconditionedVariables,
+                       conditionedVariables,
+                       list(factors)[0].variableDomainsDict())
+    
 
-    # We assume that the variableDomainsDict for all the input factors are the same
-    variableDomainsDict = factors[0].variableDomainsDict()
-
-    result = Factor(setOfUnconditioned, setOfConditioned, variableDomainsDict)
-    for assignment in result.getAllPossibleAssignmentDicts():
-        prob = 1
+    # Create the pointwise product for each entry in the new factor.
+    for assignment in newFactor.getAllPossibleAssignmentDicts():
+        # Fancy code that I showed in class
+        #product = functools.reduce(lambda x,y : x*y,
+        #                           [factor.getProbability(assignment)
+        #                            for factor in factors])
+        # Easier-to-understand code
+        product = 1
         for factor in factors:
-            prob *= factor.getProbability(assignment)
-        result.setProbability(assignment, prob)
+            product *= factor.getProbability(assignment)
+        newFactor.setProbability(assignment, product)
 
-    return result
+    return newFactor
+
+    "*** END YOUR CODE HERE ***"
 
 
 def eliminateWithCallTracking(callTrackingList=None):
@@ -157,39 +178,50 @@ def eliminateWithCallTracking(callTrackingList=None):
 
         # typecheck portion
         if eliminationVariable not in factor.unconditionedVariables():
-            print "Factor failed eliminate typecheck: ", factor
-            raise ValueError, ("Elimination variable is not an unconditioned variable " \
+            print("Factor failed eliminate typecheck: ", factor)
+            raise ValueError("Elimination variable is not an unconditioned variable " \
                             + "in this factor\n" + 
                             "eliminationVariable: " + str(eliminationVariable) + \
                             "\nunconditionedVariables:" + str(factor.unconditionedVariables()))
         
         if len(factor.unconditionedVariables()) == 1:
-            print "Factor failed eliminate typecheck: ", factor
-            raise ValueError, ("Factor has only one unconditioned variable, so you " \
+            print("Factor failed eliminate typecheck: ", factor)
+            raise ValueError("Factor has only one unconditioned variable, so you " \
                     + "can't eliminate \nthat variable.\n" + \
                     "eliminationVariable:" + str(eliminationVariable) + "\n" +\
                     "unconditionedVariables: " + str(factor.unconditionedVariables()))
 
         "*** YOUR CODE HERE ***"
-        setOfUnconditioned = factor.unconditionedVariables()
-        setOfUnconditioned.remove(eliminationVariable)
+        #util.raiseNotDefined()
 
-        setOfConditioned = factor.conditionedVariables()
+        # Obtain list of unconditioned and conditioned variables
+        unconditionedVariables = set(factor.unconditionedVariables())
+        conditionedVariables = set(factor.conditionedVariables())
 
-        variableDomainsDict = factor.variableDomainsDict()
+        # Remove variable to be eliminated from unconditioned set
+        newUnconditioned = unconditionedVariables.copy()
+        newUnconditioned.remove(eliminationVariable)
 
-        newFactor = Factor(setOfUnconditioned, setOfConditioned, variableDomainsDict)
+        # Construct the new factor with elimination variable removed
+        newDomainsDict = factor.variableDomainsDict()
+        newFactor = Factor(newUnconditioned,
+                           conditionedVariables,
+                           newDomainsDict)
 
-        # Loop over all the assignments of the new factor
+        # Loop over all assignments of new factor
         for assignment in newFactor.getAllPossibleAssignmentDicts():
-            prob = 0
-            # Loop over all values of eliminationVariable to sum them up
-            for value in variableDomainsDict[eliminationVariable]:
+            prob_sum = 0
+            # Loop over assignments that contain the elimination variable and sum them
+            for value in newDomainsDict[eliminationVariable]:
                 assignment[eliminationVariable] = value
-                prob += factor.getProbability(assignment)
-            newFactor.setProbability(assignment, prob)
+                prob_sum += factor.getProbability(assignment)
+             
+            # Set probability for given assignment of new factor
+            newFactor.setProbability(assignment, prob_sum)
 
         return newFactor
+
+        "*** END YOUR CODE HERE ***"
 
     return eliminate
 
@@ -237,37 +269,46 @@ def normalize(factor):
     variableDomainsDict = factor.variableDomainsDict()
     for conditionedVariable in factor.conditionedVariables():
         if len(variableDomainsDict[conditionedVariable]) > 1:
-            print "Factor failed normalize typecheck: ", factor
-            raise ValueError, ("The factor to be normalized must have only one " + \
+            print("Factor failed normalize typecheck: ", factor)
+            raise ValueError("The factor to be normalized must have only one " + \
                             "assignment of the \n" + "conditional variables, " + \
                             "so that total probability will sum to 1\n" + 
                             str(factor))
 
     "*** YOUR CODE HERE ***"
-    setOfUnconditioned = factor.unconditionedVariables()
-    setOfConditioned = factor.conditionedVariables()
+    #util.raiseNotDefined()
 
-    variableDomainsDict = factor.variableDomainsDict()
+    unconditionedVariables = factor.unconditionedVariables()
+    conditionedVariables = factor.conditionedVariables()
 
-    # Convert unconditioned variables with exactly one entry to conditioned
-    for unconditionedVariable in setOfUnconditioned.copy():
-        if len(variableDomainsDict[unconditionedVariable]) == 1:
-            setOfUnconditioned.remove(unconditionedVariable)
-            setOfConditioned.add(unconditionedVariable)
+    # If an unconditioned variable has domain of size 1, treat it like a conditioned variable
+    variableDomainsDict =  factor.variableDomainsDict()
+    for variable in unconditionedVariables.copy():
+        if len(variableDomainsDict[variable]) == 1:
+            conditionedVariables.add(variable)
+            unconditionedVariables.remove(variable)
 
-    newFactor = Factor(setOfUnconditioned, setOfConditioned, variableDomainsDict)
+    # Create new factor with updated sets of unconditoned and conditioned variables
+    newFactor = Factor(unconditionedVariables,
+                       conditionedVariables,
+                       variableDomainsDict)
 
-    # Compute the sum of all entries which will be used later to normalize
-    totalSum = 0.0
+    # Sum probabilities over all possible assignments for factor
+    prob_sum = 0
     for assignment in factor.getAllPossibleAssignmentDicts():
-        totalSum += factor.getProbability(assignment)
+        prob_sum += factor.getProbability(assignment)
 
-    # The sum of probabilities of the input factor is 0
-    if totalSum == 0: return None
+    # If probabilities sum to 0, return None.  Otherwise, continue normailizing
+    if prob_sum == 0: return None
 
-    # Normalize all entries
-    for assignment in newFactor.getAllPossibleAssignmentDicts():
-        prob = factor.getProbability(assignment)
-        newFactor.setProbability(assignment, prob/totalSum)
+    #... Set probability of an assignment in newFactor to assignment's old
+    #... probability divided by the sum of all probabilities
+    for assignment in factor.getAllPossibleAssignmentDicts():
+        prior_prob = factor.getProbability(assignment)
+        newFactor.setProbability(assignment, (prior_prob/prob_sum))
 
     return newFactor
+       
+    "*** END YOUR CODE HERE ***"
+
+

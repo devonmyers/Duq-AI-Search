@@ -67,7 +67,6 @@ def inferenceByEnumeration(bayesNet, queryVariables, evidenceDict):
     # now the factor is conditioned on the evidence variables
 
     # the order is join on all variables, then eliminate on all elimination variables
-    #print "callTrackingList: ", callTrackingList
     return queryConditionedOnEvidence
 
 def inferenceByVariableEliminationWithCallTracking(callTrackingList=None):
@@ -131,27 +130,44 @@ def inferenceByVariableEliminationWithCallTracking(callTrackingList=None):
             eliminationOrder = sorted(list(eliminationVariables))
 
         "*** YOUR CODE HERE ***"
-        # Initial factors instantiated by evidence
-        currentFactorsList = bayesNet.getAllCPTsWithEvidence(evidenceDict)
+        #util.raiseNotDefined()
+        """
+        These print statements show the form of all arguments
+        print(f'The given bayes net is {bayesNet}')
+        print(f'The query variables are {queryVariables}')
+        print(f'The evidence dictionary is {evidenceDict}')
+        print(f'The elimination order is {eliminationOrder}')
+        """
 
-        # Iterate over hidden variables in eliminationOrder
+        # Get CPTs instantiated by evidence
+        currentFactorList = bayesNet.getAllCPTsWithEvidence(evidenceDict)
+
+        # Loop over variables to be eliminated according to elimination order list
         for eliminationVariable in eliminationOrder:
-            # Perform a join over eliminationVariable to get joinedFactor
-            currentFactorsList, joinedFactor = joinFactorsByVariable(currentFactorsList, eliminationVariable)
 
-            # Discard factor if it has only one unconditioned variable,
-            # otherwise eliminate eliminationVariable from the factor joinedFactor
-            if len(joinedFactor.unconditionedVariables()) > 1:
-                eliminateFactor = eliminate(joinedFactor, eliminationVariable)
-                currentFactorsList.append(eliminateFactor)
+            # Join factors with elimination variable
+            currentFactorList, joinFactor = joinFactorsByVariable(currentFactorList, eliminationVariable)
+            
 
-        # Join all remaining factors
-        fullJointOverQueryAndEvidence = joinFactors(currentFactorsList)
+            # If joinFactor has a single unconditioned variable, discard it
+            joinFactorUnconditioned = joinFactor.unconditionedVariables()
+            if len(joinFactorUnconditioned) > 1:	# Must be >1 so as to avoid having a factor with no unconditioned variables
+                
+                # reducedFactor is joinFactor with the eliminationVariable removed
+                reducedFactor = eliminate(joinFactor, eliminationVariable)
+                currentFactorList.append(reducedFactor)
 
-        # Normalize
-        queryConditionedOnEvidence = normalize(fullJointOverQueryAndEvidence)
+        #... Now that all the variables in eliminationOrder are removed, we can 
+        #... join remaining factors and normalize.  After normalizing, we will
+        #... have a factor conditioned on all the evidence variables
+
+        fullJointOverQueryAndEvidence = joinFactors(currentFactorList)
+        queryConditionedOnEvidence    = normalize(fullJointOverQueryAndEvidence)
 
         return queryConditionedOnEvidence
+
+        "*** END YOUR CODE HERE ***"
+
 
     return inferenceByVariableElimination
 
@@ -180,7 +196,7 @@ def sampleFromFactorRandomSource(randomSource=None):
         probability.
         """
         if conditionedAssignments is None and len(factor.conditionedVariables()) > 0:
-            raise ValueError, ("Conditioned assignments must be provided since \n" +
+            raise ValueError("Conditioned assignments must be provided since \n" +
                             "this factor has conditionedVariables: " + "\n" +
                             str(factor.conditionedVariables()))
 
@@ -188,7 +204,7 @@ def sampleFromFactorRandomSource(randomSource=None):
             conditionedVariables = set([var for var in conditionedAssignments.keys()])
 
             if not conditionedVariables.issuperset(set(factor.conditionedVariables())):
-                raise ValueError, ("Factor's conditioned variables need to be a subset of the \n"
+                raise ValueError("Factor's conditioned variables need to be a subset of the \n"
                                     + "conditioned assignments passed in. \n" + \
                                 "conditionedVariables: " + str(conditionedVariables) + "\n" +
                                 "factor.conditionedVariables: " + str(set(factor.conditionedVariables())))
