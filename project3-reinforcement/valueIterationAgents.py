@@ -193,24 +193,3 @@ class AsynchronousValueIterationAgent(ValueIterationAgent):
                 action = self.computeActionFromValues(state) # best action in 'state'
                 QValue = self.computeQValueFromValues(state, action)
                 self.values[state] = QValue # Update value for 'state'
-
-class PrioritizedSweepingValueIterationAgent(AsynchronousValueIterationAgent):
-    """
-        * Please read learningAgents.py before reading this.*
-
-        A PrioritizedSweepingValueIterationAgent takes a Markov decision process
-        (see mdp.py) on initialization and runs prioritized sweeping value iteration
-        for a given number of iterations using the supplied parameters.
-    """
-    def __init__(self, mdp, discount = 0.9, iterations = 100, theta = 1e-5):
-        """
-          Your prioritized sweeping value iteration agent should take an mdp on
-          construction, run the indicated number of iterations,
-          and then act according to the resulting policy.
-        """
-        self.theta = theta
-        ValueIterationAgent.__init__(self, mdp, discount, iterations)
-
-    def runValueIteration(self):
-        "*** YOUR CODE HERE ***"
-        return None
