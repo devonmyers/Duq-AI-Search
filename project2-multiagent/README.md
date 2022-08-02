@@ -3,7 +3,7 @@ Several different types of agents were designed:
 
 --Reflex Agent: An agent that avoids ghosts and takes actions to eat food and increase its score
 
---Minimax Agent: An agent designed using the minimax decision theory algorithm; tries to minimize losses and maximize gains
+--Minimax Agent: An agent designed using the minimax decision theory algorithm which assumes each adversarial player only makes optimal choices; tries to minimize losses and maximize gains
 
 --Alpha-Beta Agent: An agent that uses alpha-beta pruning to make the minimax algorithm run more efficiently
 
