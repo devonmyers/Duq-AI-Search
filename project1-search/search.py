@@ -41,18 +41,45 @@ class SearchProblem:
         """
         util.raiseNotDefined()
 
-    def getSuccessors(self, state):
+    def expand(self, state):
         """
           state: Search state
 
-        For a given state, this should return a list of triples, (successor,
-        action, stepCost), where 'successor' is a successor to the current
+        For a given state, this should return a list of triples, (child,
+        action, stepCost), where 'child' is a child to the current
         state, 'action' is the action required to get there, and 'stepCost' is
-        the incremental cost of expanding to that successor.
+        the incremental cost of expanding to that child.
         """
         util.raiseNotDefined()
 
-    def getCostOfActions(self, actions):
+    def getActions(self, state):
+        """
+          state: Search state
+
+        For a given state, this should return a list of possible actions.
+        """
+        util.raiseNotDefined()
+
+    def getActionCost(self, state, action, next_state):
+        """
+          state: Search state
+          action: action taken at state.
+          next_state: next Search state after taking action.
+
+        For a given state, this should return the cost of the (s, a, s') transition.
+        """
+        util.raiseNotDefined()
+
+    def getNextState(self, state, action):
+        """
+          state: Search state
+          action: action taken at state
+
+        For a given state, this should return the next state after taking action from state.
+        """
+        util.raiseNotDefined()
+
+    def getCostOfActionSequence(self, actions):
         """
          actions: A list of actions to take
 
@@ -70,91 +97,7 @@ def tinyMazeSearch(problem):
     from game import Directions
     s = Directions.SOUTH
     w = Directions.WEST
-    return [s, s, w, s, w, w, s, w]
-
-def buildActions(node, parent):
-    action = node[1]
-    if action is None: return []
-    return buildActions(parent[node], parent) + [action]
-
-def graphSearchWithoutCosts(problem, fringe):
-
-    # Dict to track who is the parent of each node
-    # parent[node1] = node2 means that the parent of node1 is node2
-    parent = dict()
-    # Set of closed states (states that have already been visited)
-    closed = set()
-
-    # Insert starting node into the fringe
-    # Note that a node is a tuple consisting of a state, an action and a cost
-    # node[0] = state, node[1] = action, node[2] = cost
-    start_state = problem.getStartState()
-    start_action = None
-    start_cost = 0
-    start_node = (start_state, start_action, start_cost)
-    fringe.push(start_node)
-
-    while not fringe.isEmpty():
-        node = fringe.pop()
-        state = node[0]
-
-        if problem.isGoalState(state): return buildActions(node, parent)
-
-        if state not in closed:
-            closed.add(state)
-
-            for successor in problem.getSuccessors(state):
-                successor_state = successor[0]
-
-                if successor_state not in closed:
-                    fringe.push(successor)
-                    parent[successor] = node
-
-    return []
-
-def graphSearchWithCosts(problem, heuristic):
-
-    # Dict to track who is the parent of each node
-    # parent[node1] = node2 means that the parent of node1 is node2
-    parent = {}
-    # Set of closed states (states that have already been visited)
-    closed = set()
-    # Dict to track the cost of each node
-    cost = {}
-    fringe = util.PriorityQueue()
-
-    # Insert starting node into the fringe
-    # Note that a node is a tuple consisting of a state and an action
-    # while the cost is the priority of this item
-    # node[0] = state, node[1] = action, node[2] = cost
-    start_state = problem.getStartState()
-    start_action = None
-    start_cost = 0
-    fringe.push(item=(start_state, start_action), priority=start_cost)
-    cost[start_state] = start_cost
-
-    while not fringe.isEmpty():
-        node = fringe.pop()
-        state = node[0]
-
-        if problem.isGoalState(state): return buildActions(node, parent)
-
-        if state not in closed:
-            closed.add(state)
-
-            for successor in problem.getSuccessors(state):
-                successor_state = successor[0]
-                successor_cost = successor[2]
-
-                if successor_state not in closed:
-                    g = cost[state] + successor_cost
-                    h = heuristic(successor_state, problem)
-                    # To understand why this works, check how update function acts
-                    fringe.update(successor[:2], g+h)
-                    cost[successor_state] = g
-                    parent[successor[:2]] = node
-
-    return []
+    return  [s, s, w, s, w, w, s, w]
 
 def depthFirstSearch(problem):
     """
@@ -166,22 +109,31 @@ def depthFirstSearch(problem):
     To get started, you might want to try some of these simple commands to
     understand the search problem that is being passed in:
 
-    print "Start:", problem.getStartState()
-    print "Is the start a goal?", problem.isGoalState(problem.getStartState())
-    print "Start's successors:", problem.getSuccessors(problem.getStartState())
+    print("Start:", problem.getStartState())
+    print("Is the start a goal?", problem.isGoalState(problem.getStartState()))
     """
     "*** YOUR CODE HERE ***"
-    return graphSearchWithoutCosts(problem, util.Stack())
+    util.raiseNotDefined()
 
 def breadthFirstSearch(problem):
     """Search the shallowest nodes in the search tree first."""
     "*** YOUR CODE HERE ***"
-    return graphSearchWithoutCosts(problem, util.Queue())
-
-def uniformCostSearch(problem):
-    """Search the node of least total cost first."""
-    "*** YOUR CODE HERE ***"
-    return graphSearchWithCosts(problem, nullHeuristic)
+    frontier = util.Queue()			# create FIFO Queue for frontier
+    expanded_nodes = []				# list of nodes that have been expanded
+    start_node = problem.getStartState()	# starting postition
+    frontier.push((start_node,[]))		# push (starting position, []) tuple into Queue.  Empty list will be the path to goal
+    while not frontier.isEmpty():
+        node = frontier.pop()			# pop next element in the frontier queue
+        if problem.isGoalState(node[0]):
+            return node[1]			# if current node is the goal, return path to goal (second element of the node tuple)
+        if node[0] not in expanded_nodes:
+            expanded_nodes.append(node[0])		# add visited node to expanded node list
+            possible_moves = problem.expand(node[0]) 	# list of possible moves from current node
+            _length = len(possible_moves)
+            for i in range(_length):
+               frontier.push((possible_moves[i][0], node[1]+[possible_moves[i][1]]))	# node variable is tuple and 2nd element keeps track of the path
+        
+    return None
 
 def nullHeuristic(state, problem=None):
     """
@@ -189,15 +141,172 @@ def nullHeuristic(state, problem=None):
     goal in the provided SearchProblem.  This heuristic is trivial.
     """
     return 0
+    
+def compute_priority(state, action_cost, path_cost, heuristic=nullHeuristic):
+    """ Computes priority for a given state using action cost and specified heuristic.
+
+	    Args - state is (x,y) location, action_cost is the cost of the specified action
+		   which comes from the expand() function, and path_cost is the cost of a 
+                   specific path from the start node to the node whose priority is being 
+                   computed
+	    Returns - priority to be stored in queue
+    """
+    return heuristic(state, problem) + action_cost + path_cost
 
 def aStarSearch(problem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
     "*** YOUR CODE HERE ***"
-    return graphSearchWithCosts(problem, heuristic)
+    
+    class Node:
+        """ 
+        Attributes:
+            state is (x,y) location in the pacman grid
+            path is the path taken to get to current state
+            cost is the the total cost along the path
+        """
+        def __init__(self, state, path, cost):
+            self.state = state
+            self.path = path
+            self.cost = cost
 
+    node = Node(problem.getStartState(), (), 0) # Initial cost is 0
+    frontier = util.PriorityQueue()
+    frontier.push(node, 1)		# arbitrary priority for first node
+    expanded = []
+    while not frontier.isEmpty():
+        node = frontier.pop()
+        if problem.isGoalState(node.state):
+            return list(node.path)
+        if node.state not in expanded:
+            expanded.append(node.state)
+            child_nodes = problem.expand(node.state)
+            for child in child_nodes:
+                action_cost = child[2]
+                priority = heuristic(child[0], problem) + action_cost + node.cost
+                frontier.push(Node(child[0], node.path + (child[1],), node.cost + action_cost), priority)
+    return None
+
+def isCycle(node_state, ):
+    '''
+    Args:
+      node_state: (x,y) location in the grid
+      expanded: list of previously expanded locations
+   
+   Returns:
+      Boolean True if the state in the given node appears previously in expanded data structure
+      Boolean False otherwise
+    '''
+    if node_state in expanded:
+        return True
+    else:
+        return False
+    
+    
+''' The following code can be added to the end of search.py to
+add iterative deepening as one of the available search algorithms.'''
+
+def iterativeDeepeningSearch(problem):
+    '''Implements iterative deepening search to find an optimal solution
+    path for the given problem. 
+
+    This is done by repeatedly running a depth-limited version of
+    depth-first search for increasing depths.  A depth-limited search
+    only expands a node--retrieves its children and adds them to the
+    frontier--if the path to the node has a number of actions that is
+    no more than the given depth.  If a node would have been expanded
+    except for the depth limit, we say that the search has been "cut
+    off" for that depth limit.  As suggested by the slides, we will
+    run this search for depth limits of 1, 2, 3, etc., until either a
+    solution is found or a depth-limited search has been run without
+    being cut off for a given depth limit and without finding a
+    solution, in which case no goal node can be reached and
+    iterativeDeepeningSearch should return None.
+
+    Args:
+      problem: A SearchProblem instance that defines a search problem.
+
+    Returns: 
+      A list of actions that is as short as possible for reaching a
+        goal node, or None if no goal node is reachable from the initial 
+        state.
+
+    '''
+    depth_limit = 0
+    while True:
+        depth_limit += 1
+        # print(f'Search to depth {depth_limit}')
+        result = limitedDepthFirstSearch(problem, depth_limit)
+        if result != "cutoff":
+            return result
+
+def limitedDepthFirstSearch(problem, depth_limit=1):
+    '''Runs depth-first search with a depth bound.
+
+    Args:
+      problem: A SearchProblem instance that defines a search problem.
+      depth_limit: A node will not be expanded if the path to the node
+        has a length exceeding the depth value, which is expected to
+        be a positive integer.
+
+    Returns:
+      A path to a goal node, if one is found, or the string "cutoff" if no
+      goal was found and the search was cut off for the given depth limit,
+      or None if no goal was found and the search was not cut off.
+    '''
+    class Node:
+        """ 
+        A visited attribute was added to the node class.  This functions similarly as the 
+        expanded data structure used in other search algorithms we have used.  The main 
+        thing is that the visited attribute of node objects will keep track of (x, y) 
+        locations that the node object has expanded along its path.  It is worth noting
+        that the visited attribute will be unique to each node object.
+        """
+        def __init__(self, state, path, visited):
+            self.state = state
+            self.path = path
+            self.visited = visited
+           
+    node = Node(problem.getStartState(), (), ())
+    frontier = util.Stack()
+    frontier.push(node)
+    #expanded = []
+    result = None
+    while not frontier.isEmpty():
+        node = frontier.pop()
+        if problem.isGoalState(node.state):
+            return list(node.path)
+        if len(node.path) > depth_limit:
+            result = "cutoff"
+        elif not isCycle(node.state, node.visited):
+            node.visited = node.visited + (node.state,)
+            #expanded.append(node.state)
+            child_nodes = problem.expand(node.state)
+            for child in child_nodes:
+                frontier.push(Node(child[0], node.path + (child[1],), node.visited))
+    return result
+
+def isCycle(node_state, node_visited):
+    '''
+    Args:
+      node_state:  current state ((x, y) location) of node
+      node_visited: tuple of (x, y) locations that a node has visited on its path
+
+    Returns:
+      False if the current state of node object has *not* been visited on node's path
+      True otherwise
+
+    Note that this function does not just check if a state has been visited, but rather
+    checks if a state has been visited by a particular node object.  So one state may be 
+    attained by different node objects 
+    '''
+    if node_state not in node_visited:
+        return False
+    else:
+        return True
+    
 
 # Abbreviations
 bfs = breadthFirstSearch
 dfs = depthFirstSearch
 astar = aStarSearch
-ucs = uniformCostSearch
+ids = iterativeDeepeningSearch
